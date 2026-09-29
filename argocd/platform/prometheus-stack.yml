@@ -1,0 +1,110 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 65.8.1
+    helm:
+      values: |
+        grafana:
+          enabled: true
+          adminPassword: "" # pulled via External Secrets
+          persistence:
+            enabled: true
+            size: 5Gi
+          dashboardProviders:
+            dashboardproviders.yaml:
+              apiVersion: 1
+              providers:
+                - name: custom
+                  orgId: 1
+                  folder: "Platform"
+                  type: file
+                  options:
+                    path: /var/lib/grafana/dashboards/custom
+          dashboardsConfigMaps:
+            custom: grafana-dashboards
+          sidecar:
+            dashboards:
+              enabled: true
+              searchNamespace: ALL
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:  { cpu: 500m, memory: 512Mi }
+
+        prometheus:
+          prometheusSpec:
+            retention: 15d
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: [ReadWriteOnce]
+                  resources:
+                    requests:
+                      storage: 20Gi
+            resources:
+              requests: { cpu: 200m, memory: 512Mi }
+              limits:  { cpu: 1000m, memory: 2Gi }
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+
+        alertmanager:
+          alertmanagerSpec:
+            resources:
+              requests: { cpu: 50m, memory: 64Mi }
+              limits:  { cpu: 100m, memory: 128Mi }
+
+        nodeExporter:
+          enabled: true
+
+        defaultRules:
+          create: true
+          rules:
+            alertmanager: true
+            etcd: false
+            configReloaders: true
+            general: true
+            k8sContainerMemoryCache: true
+            k8sContainerMemoryRequests: true
+            k8sContainerMemoryRss: true
+            k8sContainerMemorySwap: true
+            k8sContainerMemoryWorkingSetBytes: true
+            k8sContainerResourceRequests: true
+            k8sCpuThrottlingHigh: true
+            k8sMemoryQuotaExceeded: true
+            kubeApiserver: true
+            kubeApiserverAvailability: true
+            kubeApiserverBurnrate: true
+            kubeApiserverHistogram: true
+            kubeApiserverSlos: true
+            kubeControllerManager: false
+            kubelet: true
+            kubeProxy: false
+            kubePrometheusGeneral: true
+            kubePrometheusNodeRecording: true
+            kubernetesApps: true
+            kubernetesResources: true
+            kubernetesStorage: true
+            kubernetesSystem: true
+            kubeSchedulerAlerting: false
+            kubeSchedulerRecording: false
+            kubeStateMetrics: true
+            network: true
+            node: true
+            nodeExporterAlerting: true
+            nodeExporterRecording: true
+            prometheus: true
+            prometheusOperator: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

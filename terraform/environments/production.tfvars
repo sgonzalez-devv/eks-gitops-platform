@@ -1,0 +1,11 @@
+environment          = "production"
+aws_region           = "us-east-1"
+cluster_name         = "eks-gitops"
+cluster_version      = "1.31"
+vpc_cidr             = "10.0.0.0/16"
+azs                  = ["us-east-1a", "us-east-1b", "us-east-1c"]
+system_node_instance = "t3.medium"
+app_node_instance    = "t3.large"
+app_node_min         = 2
+app_node_max         = 10
+github_repo          = "sgonzalez-devv/eks-gitops-platform"

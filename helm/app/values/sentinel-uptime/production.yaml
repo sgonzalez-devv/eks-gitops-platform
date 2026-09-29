@@ -1,0 +1,40 @@
+image:
+  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sentinel-uptime-api
+  tag: latest  # updated by CI via update-image workflow
+
+replicaCount: 2
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/sentinel-uptime-production
+
+ingress:
+  hosts:
+    - host: api.sentinel-uptime.com
+      paths:
+        - path: /
+          pathType: Prefix
+  annotations:
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789012:certificate/xxx
+
+resources:
+  requests:
+    cpu: 256m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 8
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "3001"
+
+envFrom:
+  - secretRef:
+      name: sentinel-uptime-secrets

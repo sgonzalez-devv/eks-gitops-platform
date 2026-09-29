@@ -1,0 +1,55 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  helm-lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+      - name: Lint app chart
+        run: helm lint helm/app --strict
+      - name: Template render check
+        run: |
+          helm template test helm/app \
+            --set image.repository=test/app \
+            --set image.tag=abc1234 \
+            --set ingress.hosts[0].host=test.example.com \
+            --set "ingress.hosts[0].paths[0].path=/" \
+            > /dev/null && echo "✓ Template renders cleanly"
+
+  terraform-lint:
+    name: Terraform lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.x
+      - run: terraform fmt -check -recursive terraform/
+      - run: terraform init -backend=false
+        working-directory: terraform
+      - run: terraform validate
+        working-directory: terraform
+
+  yaml-lint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          config_data: |
+            extends: default
+            rules:
+              line-length: { max: 160 }
+              truthy: disable
+          file_or_dir: argocd/ monitoring/ policies/

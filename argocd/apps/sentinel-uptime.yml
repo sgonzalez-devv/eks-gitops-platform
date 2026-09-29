@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sentinel-uptime
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: apps
+  source:
+    repoURL: https://github.com/sgonzalez-devv/eks-gitops-platform
+    targetRevision: HEAD
+    path: helm/app
+    helm:
+      valueFiles:
+        - values/sentinel-uptime/production.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sentinel-uptime
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # HPA manages replicas
